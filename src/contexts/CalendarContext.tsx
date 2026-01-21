@@ -12,6 +12,8 @@ interface CalendarContextType {
   setSelectedColorTexture: (colorTexture: ColorTextureCode) => void
   selectedView: CalendarView
   setSelectedView: (view: CalendarView) => void
+  googleDriveFileId: string | null
+  setGoogleDriveFileId: (fileId: string | null) => void
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
@@ -27,6 +29,7 @@ interface StoredData {
   dateCells: Record<string, DateCellData>
   selectedColorTexture: ColorTextureCode
   selectedView: CalendarView
+  googleDriveFileId?: string
   version?: string
 }
 
@@ -37,6 +40,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
   const [dateCells, setDateCellsState] = useState<Map<string, DateCellData>>(new Map())
   const [selectedColorTexture, setSelectedColorTextureState] = useState<ColorTextureCode>("red")
   const [selectedView, setSelectedViewState] = useState<CalendarView>("Linear")
+  const [googleDriveFileId, setGoogleDriveFileIdState] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -64,6 +68,10 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
         if (parsedData.selectedView && ["Linear", "Classic", "Column"].includes(parsedData.selectedView)) {
           setSelectedViewState(parsedData.selectedView)
         }
+
+        if (parsedData.googleDriveFileId) {
+          setGoogleDriveFileIdState(parsedData.googleDriveFileId)
+        }
       }
     } catch (error) {
       console.error("Error loading calendar data from localStorage:", error)
@@ -85,6 +93,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       dateCells: Object.fromEntries(dateCells),
       selectedColorTexture,
       selectedView,
+      googleDriveFileId: googleDriveFileId || undefined,
     })
   }
 
@@ -95,6 +104,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       dateCells: Object.fromEntries(newDateCells),
       selectedColorTexture,
       selectedView,
+      googleDriveFileId: googleDriveFileId || undefined,
     })
   }
 
@@ -105,6 +115,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       dateCells: Object.fromEntries(dateCells),
       selectedColorTexture: colorTexture,
       selectedView,
+      googleDriveFileId: googleDriveFileId || undefined,
     })
   }
 
@@ -115,6 +126,18 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       dateCells: Object.fromEntries(dateCells),
       selectedColorTexture,
       selectedView: view,
+      googleDriveFileId: googleDriveFileId || undefined,
+    })
+  }
+
+  const setGoogleDriveFileId = (fileId: string | null) => {
+    setGoogleDriveFileIdState(fileId)
+    saveToLocalStorage({
+      selectedYear,
+      dateCells: Object.fromEntries(dateCells),
+      selectedColorTexture,
+      selectedView,
+      googleDriveFileId: fileId || undefined,
     })
   }
 
@@ -127,6 +150,8 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
     setSelectedColorTexture,
     selectedView,
     setSelectedView,
+    googleDriveFileId,
+    setGoogleDriveFileId,
   }
 
   return <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>

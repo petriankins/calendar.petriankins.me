@@ -44,3 +44,20 @@ services:
       - "8080:8080"
 ```
 
+## Google Drive Integration (Optional)
+
+To enable saving/loading from Google Drive, you need to set up a Google Cloud Project.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project.
+3. Enable **Google Drive API** for this project.
+4. Configure **OAuth Consent Screen** (External, unless you have a Workspace).
+5. Create **Credentials**:
+   - **OAuth Client ID** (Web application). Add `http://localhost:3000` to "Authorized JavaScript origins".
+   - **API Key**.
+6. Create a `.env` file in the root directory (see `.env.example`):
+
+```bash
+REACT_APP_GOOGLE_CLIENT_ID=your-client-id
+REACT_APP_GOOGLE_API_KEY=your-api-key
+```
