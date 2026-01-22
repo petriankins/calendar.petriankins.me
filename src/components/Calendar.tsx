@@ -2,6 +2,7 @@ import React from "react"
 import { useCalendar } from "../contexts/CalendarContext"
 import CalendarTitle from "./CalendarTitle"
 import ColorPicker from "./ColorPicker"
+import GoogleDriveIntegration from "./GoogleDriveIntegration"
 import SaveLoadData from "./SaveLoadData"
 import ClassicView from "./views/ClassicView"
 import ColumnView from "./views/ColumnView"
@@ -44,6 +45,7 @@ const Calendar: React.FC = () => {
 
       <div className="no-print">
         <SaveLoadData />
+        <GoogleDriveIntegration />
       </div>
     </div>
   )

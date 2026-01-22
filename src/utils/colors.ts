@@ -55,6 +55,10 @@ export const UI_COLORS = {
       normal: "oklch(0.55 0.18 240)",
       hover: "oklch(0.45 0.2 240)",
     },
+    secondary: {
+      normal: "oklch(0.6 0 0)",
+      hover: "oklch(0.5 0 0)",
+    },
     success: {
       normal: "oklch(0.65 0.15 140)",
       hover: "oklch(0.55 0.17 140)",
