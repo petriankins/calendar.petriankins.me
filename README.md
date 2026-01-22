@@ -53,7 +53,7 @@ To enable saving/loading from Google Drive, you need to set up a Google Cloud Pr
 3. Enable **Google Drive API** for this project.
 4. Configure **OAuth Consent Screen** (External, unless you have a Workspace).
 5. Create **Credentials**:
-   - **OAuth Client ID** (Web application). Add `http://localhost:3000` to "Authorized JavaScript origins".
+   - **OAuth Client ID** (Web application). Add `http://localhost:3000` (and your production URL if you deploy it, e.g., `https://your-app.netlify.app`) to "Authorized JavaScript origins".
    - **API Key**.
 6. Create a `.env` file in the root directory (see `.env.example`):
 
