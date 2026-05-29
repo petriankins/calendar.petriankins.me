@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { ColorTextureCode, DateCellData } from "../utils/colors"
+import { useGoogleDrive } from "./GoogleDriveContext"
 
 type CalendarView = "Linear" | "Classic" | "Column"
 
@@ -42,6 +43,10 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
   const [selectedView, setSelectedViewState] = useState<CalendarView>("Linear")
   const [googleDriveFileId, setGoogleDriveFileIdState] = useState<string | null>(null)
 
+  const { authStatus, findFileByName, getFileContent, createFile, updateFile, setSyncStatus } = useGoogleDrive()
+  const [isLoadingFromDrive, setIsLoadingFromDrive] = useState(false)
+
+  // 1. Initial Load from LocalStorage
   useEffect(() => {
     try {
       const storedData = localStorage.getItem(STORAGE_KEY)
@@ -77,6 +82,111 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       console.error("Error loading calendar data from localStorage:", error)
     }
   }, [currentYear])
+
+  // 2. Drive Synchronization (Load or Create) on Login or Year Change
+  useEffect(() => {
+    const syncWithDrive = async () => {
+      if (authStatus !== "authorized") {
+        return
+      }
+
+      setIsLoadingFromDrive(true)
+      setSyncStatus("syncing")
+
+      const fileName = `year-planner-${selectedYear}.json`
+      try {
+        const fileId = await findFileByName(fileName)
+
+        if (fileId) {
+          // Load data from existing file
+          const loadedData = await getFileContent(fileId)
+          
+          if (loadedData.dateCells && typeof loadedData.dateCells === "object") {
+            const dateCellsMap = new Map<string, DateCellData>(
+              Object.entries(loadedData.dateCells) as [string, DateCellData][]
+            )
+            setDateCellsState(dateCellsMap)
+          }
+          if (loadedData.selectedColorTexture) {
+            setSelectedColorTextureState(loadedData.selectedColorTexture)
+          }
+          if (loadedData.selectedView) {
+            setSelectedViewState(loadedData.selectedView)
+          }
+
+          setGoogleDriveFileIdState(fileId)
+          
+          // Save to local storage as well for fallback offline usage
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            selectedYear,
+            dateCells: loadedData.dateCells || {},
+            selectedColorTexture: loadedData.selectedColorTexture || selectedColorTexture,
+            selectedView: loadedData.selectedView || selectedView,
+            googleDriveFileId: fileId
+          }))
+        } else {
+          // Create new file with current local state
+          const initialData = {
+            selectedYear,
+            dateCells: Object.fromEntries(dateCells),
+            selectedColorTexture,
+            selectedView,
+            version: "2.0",
+            exportDate: new Date().toISOString(),
+          }
+          const newFileId = await createFile(fileName, initialData)
+          setGoogleDriveFileIdState(newFileId)
+          
+          // Update local storage
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            selectedYear,
+            dateCells: Object.fromEntries(dateCells),
+            selectedColorTexture,
+            selectedView,
+            googleDriveFileId: newFileId
+          }))
+        }
+        
+        setSyncStatus("synced")
+      } catch (error) {
+        console.error("Failed to sync calendar with Google Drive on startup/year-change", error)
+        setSyncStatus("error")
+      } finally {
+        setIsLoadingFromDrive(false)
+      }
+    }
+
+    syncWithDrive()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, authStatus])
+
+  // 3. Debounced Auto-save to Google Drive
+  useEffect(() => {
+    if (authStatus !== "authorized" || !googleDriveFileId || isLoadingFromDrive) return
+
+    setSyncStatus("syncing")
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const dataToSave = {
+          selectedYear,
+          dateCells: Object.fromEntries(dateCells),
+          selectedColorTexture,
+          selectedView,
+          googleDriveFileId,
+          version: "2.0",
+          exportDate: new Date().toISOString(),
+        }
+        await updateFile(googleDriveFileId, dataToSave)
+        setSyncStatus("synced")
+      } catch (error) {
+        console.error("Auto-save to Google Drive failed", error)
+        setSyncStatus("error")
+      }
+    }, 1500) // 1.5 seconds debounce
+
+    return () => clearTimeout(delayDebounceFn)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateCells, selectedColorTexture, selectedView, googleDriveFileId, authStatus, isLoadingFromDrive])
 
   const saveToLocalStorage = (data: StoredData) => {
     try {

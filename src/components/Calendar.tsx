@@ -2,8 +2,7 @@ import React from "react"
 import { useCalendar } from "../contexts/CalendarContext"
 import CalendarTitle from "./CalendarTitle"
 import ColorPicker from "./ColorPicker"
-import GoogleDriveIntegration from "./GoogleDriveIntegration"
-import SaveLoadData from "./SaveLoadData"
+import { FloatingSyncBar } from "./FloatingSyncBar"
 import ClassicView from "./views/ClassicView"
 import ColumnView from "./views/ColumnView"
 import LinearView from "./views/LinearView"
@@ -14,6 +13,8 @@ const Calendar: React.FC = () => {
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <FloatingSyncBar />
+      
       <CalendarTitle />
       <div className="no-print">
         <ColorPicker />
@@ -42,11 +43,6 @@ const Calendar: React.FC = () => {
           selectedColorTexture={selectedColorTexture}
         />
       )}
-
-      <div className="no-print">
-        <SaveLoadData />
-        <GoogleDriveIntegration />
-      </div>
     </div>
   )
 }
