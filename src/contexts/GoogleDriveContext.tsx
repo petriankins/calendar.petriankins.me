@@ -26,7 +26,7 @@ const GoogleDriveContext = createContext<GoogleDriveContextType | undefined>(und
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID
 const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"
-const SCOPES = "https://www.googleapis.com/auth/drive.file"
+const SCOPES = "https://www.googleapis.com/auth/drive"
 
 interface GoogleDriveProviderProps {
   children: React.ReactNode
