@@ -13,10 +13,12 @@ interface GoogleDriveContextType {
   gisInited: boolean
   login: () => void
   logout: () => void
-  findFileByName: (name: string) => Promise<string | null>
+  findFileByName: (name: string, ownerEmail?: string) => Promise<string | null>
   getFileContent: (fileId: string) => Promise<any>
   createFile: (name: string, content: any) => Promise<string>
   updateFile: (fileId: string, content: any) => Promise<void>
+  primaryOwnerEmail: string | null
+  isPrimaryOwner: boolean
 }
 
 const GoogleDriveContext = createContext<GoogleDriveContextType | undefined>(undefined)
@@ -39,6 +41,11 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
   const [gisInited, setGisInited] = useState(false)
 
   const tokenClient = useRef<any>(null)
+
+  const primaryOwnerEmail = process.env.REACT_APP_PRIMARY_OWNER_EMAIL || null
+  const isPrimaryOwner = currentUserEmail && primaryOwnerEmail
+    ? currentUserEmail.toLowerCase().trim() === primaryOwnerEmail.toLowerCase().trim()
+    : true
 
   // Load allowed emails from environment
   const allowedEmails = React.useMemo(() => {
@@ -187,14 +194,25 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
     }
   }
 
-  const findFileByName = async (name: string): Promise<string | null> => {
+  const findFileByName = async (name: string, ownerEmail?: string): Promise<string | null> => {
     try {
       const response = await window.gapi.client.drive.files.list({
         q: `name = '${name}' and mimeType = 'application/json' and trashed = false`,
-        fields: "files(id, name)",
-        pageSize: 1,
+        fields: "files(id, name, owners)",
+        pageSize: 10,
       })
       const files = response.result.files || []
+
+      if (ownerEmail) {
+        const targetEmail = ownerEmail.toLowerCase().trim()
+        const matchedFile = files.find((file: any) => 
+          file.owners && file.owners.some((owner: any) => 
+            owner.emailAddress && owner.emailAddress.toLowerCase().trim() === targetEmail
+          )
+        )
+        return matchedFile ? matchedFile.id : null
+      }
+
       return files.length > 0 ? files[0].id : null
     } catch (error) {
       console.error("Error finding file in Google Drive", error)
@@ -291,6 +309,8 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
         getFileContent,
         createFile,
         updateFile,
+        primaryOwnerEmail,
+        isPrimaryOwner,
       }}
     >
       {children}

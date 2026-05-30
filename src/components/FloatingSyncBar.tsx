@@ -3,7 +3,7 @@ import { useCalendar } from "../contexts/CalendarContext"
 import { useGoogleDrive } from "../contexts/GoogleDriveContext"
 
 export const FloatingSyncBar: React.FC = () => {
-  const { syncStatus, userProfile, logout } = useGoogleDrive()
+  const { syncStatus, userProfile, logout, isPrimaryOwner, primaryOwnerEmail } = useGoogleDrive()
   const {
     dateCells,
     setDateCells,
@@ -13,6 +13,7 @@ export const FloatingSyncBar: React.FC = () => {
     setSelectedColorTexture,
     selectedView,
     setSelectedView,
+    googleDriveFileId,
   } = useCalendar()
 
   const [isOpen, setIsOpen] = useState(false)
@@ -32,6 +33,9 @@ export const FloatingSyncBar: React.FC = () => {
 
   // Sync state styling helper
   const getSyncConfig = () => {
+    if (syncStatus === "error" && !isPrimaryOwner && !googleDriveFileId) {
+      return { color: "oklch(0.6 0.2 25)", text: "Not Shared", bg: "rgba(239, 68, 68, 0.08)", pulse: true }
+    }
     switch (syncStatus) {
       case "synced":
         return { color: "oklch(0.65 0.15 140)", text: "Synced", bg: "rgba(16, 185, 129, 0.08)", pulse: false }
@@ -161,6 +165,14 @@ export const FloatingSyncBar: React.FC = () => {
 
       {isOpen && (
         <div style={dropdownStyle}>
+          {syncStatus === "error" && !isPrimaryOwner && !googleDriveFileId && (
+            <div style={unsharedWarningStyle}>
+              ⚠️ <b>Not Shared Yet</b>
+              <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: "oklch(0.6 0.2 25)", lineHeight: "1.4" }}>
+                Ask the owner (<b>{primaryOwnerEmail}</b>) to share the file <b>year-planner-{selectedYear}.json</b> with Editor access on Google Drive.
+              </p>
+            </div>
+          )}
           <div style={headerStyle}>Cloud Settings</div>
           
           <button 
@@ -306,4 +318,15 @@ const actionButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   textAlign: "left",
   transition: "all 0.15s ease",
+}
+
+const unsharedWarningStyle: React.CSSProperties = {
+  background: "rgba(239, 68, 68, 0.05)",
+  border: "1px solid rgba(239, 68, 68, 0.15)",
+  borderRadius: "8px",
+  padding: "10px 12px",
+  margin: "4px 8px 8px 8px",
+  textAlign: "left",
+  fontSize: "12px",
+  color: "oklch(0.6 0.2 25)",
 }

@@ -43,7 +43,16 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
   const [selectedView, setSelectedViewState] = useState<CalendarView>("Linear")
   const [googleDriveFileId, setGoogleDriveFileIdState] = useState<string | null>(null)
 
-  const { authStatus, findFileByName, getFileContent, createFile, updateFile, setSyncStatus } = useGoogleDrive()
+  const {
+    authStatus,
+    findFileByName,
+    getFileContent,
+    createFile,
+    updateFile,
+    setSyncStatus,
+    primaryOwnerEmail,
+    isPrimaryOwner,
+  } = useGoogleDrive()
   const [isLoadingFromDrive, setIsLoadingFromDrive] = useState(false)
 
   // 1. Initial Load from LocalStorage
@@ -95,7 +104,15 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
 
       const fileName = `year-planner-${selectedYear}.json`
       try {
-        const fileId = await findFileByName(fileName)
+        let fileId: string | null = null
+
+        if (isPrimaryOwner) {
+          fileId = await findFileByName(fileName, primaryOwnerEmail || undefined)
+        } else if (primaryOwnerEmail) {
+          fileId = await findFileByName(fileName, primaryOwnerEmail)
+        } else {
+          fileId = await findFileByName(fileName)
+        }
 
         if (fileId) {
           // Load data from existing file
@@ -124,30 +141,36 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
             selectedView: loadedData.selectedView || selectedView,
             googleDriveFileId: fileId
           }))
+          setSyncStatus("synced")
         } else {
-          // Create new file with current local state
-          const initialData = {
-            selectedYear,
-            dateCells: Object.fromEntries(dateCells),
-            selectedColorTexture,
-            selectedView,
-            version: "2.0",
-            exportDate: new Date().toISOString(),
+          if (isPrimaryOwner) {
+            // Create new file with current local state
+            const initialData = {
+              selectedYear,
+              dateCells: Object.fromEntries(dateCells),
+              selectedColorTexture,
+              selectedView,
+              version: "2.0",
+              exportDate: new Date().toISOString(),
+            }
+            const newFileId = await createFile(fileName, initialData)
+            setGoogleDriveFileIdState(newFileId)
+            
+            // Update local storage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+              selectedYear,
+              dateCells: Object.fromEntries(dateCells),
+              selectedColorTexture,
+              selectedView,
+              googleDriveFileId: newFileId
+            }))
+            setSyncStatus("synced")
+          } else {
+            setGoogleDriveFileIdState(null)
+            setSyncStatus("error")
+            console.warn(`Calendar file not shared by primary owner yet: ${primaryOwnerEmail}`)
           }
-          const newFileId = await createFile(fileName, initialData)
-          setGoogleDriveFileIdState(newFileId)
-          
-          // Update local storage
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            selectedYear,
-            dateCells: Object.fromEntries(dateCells),
-            selectedColorTexture,
-            selectedView,
-            googleDriveFileId: newFileId
-          }))
         }
-        
-        setSyncStatus("synced")
       } catch (error) {
         console.error("Failed to sync calendar with Google Drive on startup/year-change", error)
         setSyncStatus("error")
