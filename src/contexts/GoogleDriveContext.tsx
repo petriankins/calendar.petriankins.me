@@ -69,6 +69,28 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
       }
     }
 
+    const saveToken = (tokenResponse: any) => {
+      if (tokenResponse && tokenResponse.access_token) {
+        const expires_in = tokenResponse.expires_in || 3600
+        const expires_at = Date.now() + expires_in * 1000
+        localStorage.setItem("gdrive_oauth_token", JSON.stringify({
+          access_token: tokenResponse.access_token,
+          expires_at,
+        }))
+
+        // Schedule silent refresh 5 minutes before token expires
+        const refreshDelay = (expires_in - 300) * 1000
+        if (refreshDelay > 0) {
+          setTimeout(() => {
+            if (tokenClient.current) {
+              console.log("Initiating silent token refresh in background...")
+              tokenClient.current.requestAccessToken({ prompt: "none" })
+            }
+          }, refreshDelay)
+        }
+      }
+    }
+
     const initializeGisClient = () => {
       try {
         tokenClient.current = window.google.accounts.oauth2.initTokenClient({
@@ -77,8 +99,9 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
           callback: async (resp: any) => {
             if (resp.error !== undefined) {
               setAuthStatus("unauthenticated")
-              throw resp
+              return
             }
+            saveToken(resp)
             setAuthStatus("authenticating")
             await checkUser()
           },
@@ -122,6 +145,39 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
   // Auto-verify token if already in session storage / local memory
   useEffect(() => {
     if (gapiInited && gisInited) {
+      const storedTokenStr = localStorage.getItem("gdrive_oauth_token")
+      if (storedTokenStr) {
+        try {
+          const storedToken = JSON.parse(storedTokenStr)
+          if (storedToken.access_token && storedToken.expires_at > Date.now() + 5 * 60 * 1000) {
+            window.gapi.client.setToken({ access_token: storedToken.access_token })
+            checkUser()
+
+            // Schedule background silent refresh for the remaining time
+            const remainingTime = storedToken.expires_at - Date.now()
+            const refreshDelay = remainingTime - 5 * 60 * 1000
+            if (refreshDelay > 0) {
+              setTimeout(() => {
+                if (tokenClient.current) {
+                  console.log("Initiating silent token refresh in background...")
+                  tokenClient.current.requestAccessToken({ prompt: "none" })
+                }
+              }, refreshDelay)
+            }
+            return
+          } else {
+            // Stored token is expired, trigger background silent refresh
+            setAuthStatus("authenticating")
+            if (tokenClient.current) {
+              tokenClient.current.requestAccessToken({ prompt: "none" })
+              return
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing stored token", error)
+        }
+      }
+
       const token = window.gapi.client.getToken()
       if (token) {
         checkUser()
@@ -177,6 +233,7 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
   }
 
   const logout = () => {
+    localStorage.removeItem("gdrive_oauth_token")
     const token = window.gapi.client.getToken()
     if (token !== null) {
       window.google.accounts.oauth2.revoke(token.access_token, () => {
