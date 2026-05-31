@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react"
 
+// Global google and gapi types
+declare global {
+  interface Window {
+    gapi: any
+    google: any
+  }
+}
+
 export type AuthStatus = "initializing" | "unauthenticated" | "authenticating" | "authorized" | "unauthorized"
 export type SyncStatus = "synced" | "syncing" | "error" | "local-only"
 
@@ -73,7 +81,7 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
       if (tokenResponse && tokenResponse.access_token) {
         const expires_in = tokenResponse.expires_in || 3600
         const expires_at = Date.now() + expires_in * 1000
-        localStorage.setItem("gdrive_oauth_token", JSON.stringify({
+        sessionStorage.setItem("gdrive_oauth_token", JSON.stringify({
           access_token: tokenResponse.access_token,
           expires_at,
         }))
@@ -145,7 +153,7 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
   // Auto-verify token if already in session storage / local memory
   useEffect(() => {
     if (gapiInited && gisInited) {
-      const storedTokenStr = localStorage.getItem("gdrive_oauth_token")
+      const storedTokenStr = sessionStorage.getItem("gdrive_oauth_token")
       if (storedTokenStr) {
         try {
           const storedToken = JSON.parse(storedTokenStr)
@@ -228,7 +236,7 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
   }
 
   const logout = () => {
-    localStorage.removeItem("gdrive_oauth_token")
+    sessionStorage.removeItem("gdrive_oauth_token")
     const token = window.gapi.client.getToken()
     if (token !== null) {
       window.google.accounts.oauth2.revoke(token.access_token, () => {
@@ -248,8 +256,9 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
 
   const findFileByName = async (name: string, ownerEmail?: string): Promise<string | null> => {
     try {
+      const safeName = name.replace(/'/g, "\\'")
       const response = await window.gapi.client.drive.files.list({
-        q: `name = '${name}' and mimeType = 'application/json' and trashed = false`,
+        q: `name = '${safeName}' and mimeType = 'application/json' and trashed = false`,
         fields: "files(id, name, owners)",
         pageSize: 10,
       })
