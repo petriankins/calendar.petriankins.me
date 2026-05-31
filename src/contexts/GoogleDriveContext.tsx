@@ -165,19 +165,14 @@ export const GoogleDriveProvider: React.FC<GoogleDriveProviderProps> = ({ childr
               }, refreshDelay)
             }
             return
-          } else {
-            // Stored token is expired, trigger background silent refresh
-            setAuthStatus("authenticating")
-            if (tokenClient.current) {
-              tokenClient.current.requestAccessToken({ prompt: "none" })
-              return
-            }
           }
         } catch (error) {
           console.error("Error parsing stored token", error)
         }
       }
 
+      // If token is expired or missing, do NOT trigger requestAccessToken automatically on mount
+      // to avoid browser popup blocker. Simply let them click the login button on the lock screen.
       const token = window.gapi.client.getToken()
       if (token) {
         checkUser()
