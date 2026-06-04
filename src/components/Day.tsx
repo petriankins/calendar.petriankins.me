@@ -8,7 +8,7 @@ interface DayProps {
   isColored?: boolean
   colorTextureCode?: ColorTextureCode
   onClick?: () => void
-  onMouseDown?: () => void
+  onMouseDown?: (e: React.PointerEvent) => void
   onMouseEnter?: () => void
   customText?: string
   onCustomTextChange?: (text: string) => void
@@ -111,6 +111,7 @@ const Day: React.FC<DayProps> = ({
     <div
       className="day"
       data-colored={isColored ? "true" : "false"}
+      data-date={`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`}
       onClick={(e) => {
         if (e.target !== e.currentTarget) {
           return
@@ -121,7 +122,7 @@ const Day: React.FC<DayProps> = ({
         if (e.target !== e.currentTarget) {
           return
         }
-        if (onMouseDown) onMouseDown()
+        if (onMouseDown) onMouseDown(e)
       }}
       onPointerEnter={(e) => {
         if (e.target !== e.currentTarget) {
@@ -143,13 +144,13 @@ const Day: React.FC<DayProps> = ({
         fontWeight: "normal",
         backgroundColor: getBackgroundColor(),
         position: "relative",
-        cursor: "cell",
+        cursor: onMouseDown ? "cell" : "default",
         transition: "background-color 0.2s ease",
         overflow: "visible",
         userSelect: "none",
         border: isToday(date) ? `2px inset ${UI_COLORS.border.inset}` : "none",
         boxSizing: "border-box",
-        touchAction: "auto",
+        touchAction: onMouseDown ? "auto" : "pan-y",
         ...getTextureStyles(),
       }}
     >

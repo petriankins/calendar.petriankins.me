@@ -1,6 +1,7 @@
 import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from "date-fns"
-import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import React from "react"
+import { ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import { useDragToColor } from "../../hooks/useDragToColor"
 import Day from "../Day"
 
 interface ClassicViewProps {
@@ -8,40 +9,15 @@ interface ClassicViewProps {
   dateCells: Map<string, DateCellData>
   setDateCells: (dateCells: Map<string, DateCellData>) => void
   selectedColorTexture: ColorTextureCode
+  compact?: boolean
 }
 
-const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
-  const [isDragging, setIsDragging] = useState(false)
+const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture, compact = false }) => {
+  const { handleMouseDown, handleMouseEnter } = useDragToColor(dateCells, setDateCells, selectedColorTexture)
 
-  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-  const handleMouseDown = (date: Date) => {
-    setIsDragging(true)
-    applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-  }
-
-  const handleMouseEnter = (date: Date) => {
-    if (isDragging) {
-      applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-    }
-  }
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    const handleGlobalTouchEnd = () => {
-      setIsDragging(false)
-    }
-
-    document.addEventListener("mouseup", handleGlobalMouseUp)
-    document.addEventListener("touchend", handleGlobalTouchEnd)
-    return () => {
-      document.removeEventListener("mouseup", handleGlobalMouseUp)
-      document.removeEventListener("touchend", handleGlobalTouchEnd)
-    }
-  }, [])
+  const dayNames = compact
+    ? ["M", "T", "W", "T", "F", "S", "S"]
+    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
   const handleCustomTextChange = (date: Date, text: string) => {
     const dateKey = getDateKey(date)
@@ -105,16 +81,20 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
 
   const months = Array.from({ length: 12 }, (_, i) => i)
 
+  const cellHeight = compact ? 36 : 40
+  const headerFontSize = compact ? "14px" : "18px"
+  const headerPadding = compact ? "8px" : "12px"
+
   return (
     <div
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: "20px",
+        gap: compact ? "10px" : "20px",
         justifyContent: "center",
         maxWidth: "100%",
         overflow: "hidden",
-        padding: "10px",
+        padding: compact ? "4px" : "10px",
       }}
     >
       {months.map((month) => {
@@ -129,9 +109,9 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
               borderRadius: "8px",
               overflow: "hidden",
               backgroundColor: UI_COLORS.background.primary,
-              minWidth: "280px",
-              maxWidth: "400px",
-              flex: "0 1 auto",
+              minWidth: compact ? "0" : "280px",
+              maxWidth: compact ? "none" : "400px",
+              flex: compact ? "1 1 100%" : "0 1 auto",
               width: "100%",
             }}
           >
@@ -139,11 +119,11 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
             <div
               style={{
                 backgroundColor: UI_COLORS.background.secondary,
-                padding: "12px",
+                padding: headerPadding,
                 textAlign: "center",
                 borderBottom: `2px solid ${UI_COLORS.border.primary}`,
                 fontWeight: "bold",
-                fontSize: "18px",
+                fontSize: headerFontSize,
               }}
             >
               {monthName}
@@ -202,7 +182,7 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                                 border: `1px solid ${UI_COLORS.border.tertiary}`,
                                 width: "14.28%",
                                 maxWidth: "14.28%",
-                                height: "40px",
+                                height: `${cellHeight}px`,
                                 overflow: "visible",
                               }}
                             />
@@ -225,7 +205,7 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                               border: `1px solid ${UI_COLORS.border.tertiary}`,
                               width: "14.28%",
                               maxWidth: "14.28%",
-                              height: "40px",
+                              height: `${cellHeight}px`,
                               overflow: "visible",
                             }}
                           >
@@ -233,9 +213,11 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                               date={day}
                               isColored={isColored}
                               colorTextureCode={dayColorTexture}
-                              onMouseDown={() => handleMouseDown(day)}
-                              onMouseEnter={() => handleMouseEnter(day)}
-                              onCustomTextChange={(text) => handleCustomTextChange(day, text)}
+                              {...(!compact && {
+                                onMouseDown: (e) => handleMouseDown(day, e),
+                                onMouseEnter: () => handleMouseEnter(day),
+                                onCustomTextChange: (text) => handleCustomTextChange(day, text),
+                              })}
                               customText={customText}
                               customTextOverflow="overflow-x"
                             />

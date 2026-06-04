@@ -1,6 +1,7 @@
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
-import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import React from "react"
+import { ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import { useDragToColor } from "../../hooks/useDragToColor"
 import Day from "../Day"
 
 interface ColumnViewProps {
@@ -11,35 +12,7 @@ interface ColumnViewProps {
 }
 
 const ColumnView: React.FC<ColumnViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleMouseDown = (date: Date) => {
-    setIsDragging(true)
-    applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-  }
-
-  const handleMouseEnter = (date: Date) => {
-    if (isDragging) {
-      applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-    }
-  }
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    const handleGlobalTouchEnd = () => {
-      setIsDragging(false)
-    }
-
-    document.addEventListener("mouseup", handleGlobalMouseUp)
-    document.addEventListener("touchend", handleGlobalTouchEnd)
-    return () => {
-      document.removeEventListener("mouseup", handleGlobalMouseUp)
-      document.removeEventListener("touchend", handleGlobalTouchEnd)
-    }
-  }, [])
+  const { handleMouseDown, handleMouseEnter } = useDragToColor(dateCells, setDateCells, selectedColorTexture)
 
   const handleCustomTextChange = (date: Date, text: string) => {
     const dateKey = getDateKey(date)
@@ -163,7 +136,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({ selectedYear, dateCells, setDat
                       date={day}
                       isColored={isColored}
                       colorTextureCode={dayColorTexture}
-                      onMouseDown={() => handleMouseDown(day)}
+                      onMouseDown={(e) => handleMouseDown(day, e)}
                       onMouseEnter={() => handleMouseEnter(day)}
                       onCustomTextChange={(text) => handleCustomTextChange(day, text)}
                       customText={customText}

@@ -1,6 +1,7 @@
 import { addDays, eachDayOfInterval, endOfYear, format, getDay, isSameMonth, startOfYear, subDays } from "date-fns"
-import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import React from "react"
+import { ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import { useDragToColor } from "../../hooks/useDragToColor"
 import Day from "../Day"
 
 interface LinearViewProps {
@@ -11,7 +12,7 @@ interface LinearViewProps {
 }
 
 const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
-  const [isDragging, setIsDragging] = useState(false)
+  const { handleMouseDown, handleMouseEnter } = useDragToColor(dateCells, setDateCells, selectedColorTexture)
 
   const year = selectedYear
   const startDate = startOfYear(new Date(year, 0, 1))
@@ -20,34 +21,6 @@ const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDat
   const allDays = eachDayOfInterval({ start: startDate, end: endDate })
 
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-  const handleMouseDown = (date: Date) => {
-    setIsDragging(true)
-    applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-  }
-
-  const handleMouseEnter = (date: Date) => {
-    if (isDragging) {
-      applyColorToDate(date, dateCells, selectedColorTexture, setDateCells)
-    }
-  }
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    const handleGlobalTouchEnd = () => {
-      setIsDragging(false)
-    }
-
-    document.addEventListener("mouseup", handleGlobalMouseUp)
-    document.addEventListener("touchend", handleGlobalTouchEnd)
-    return () => {
-      document.removeEventListener("mouseup", handleGlobalMouseUp)
-      document.removeEventListener("touchend", handleGlobalTouchEnd)
-    }
-  }, [])
 
   const handleCustomTextChange = (date: Date, text: string) => {
     const dateKey = getDateKey(date)
@@ -334,7 +307,7 @@ const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDat
                           date={day}
                           isColored={isColored}
                           colorTextureCode={dayColorTexture}
-                          onMouseDown={() => handleMouseDown(day)}
+                          onMouseDown={(e) => handleMouseDown(day, e)}
                           onMouseEnter={() => handleMouseEnter(day)}
                           onCustomTextChange={(text) => handleCustomTextChange(day, text)}
                           customText={customText}
